@@ -1,4 +1,4 @@
-module github.com/arwahdevops/go-replace
+module github.com/arwahdevops/PhotonSR
 
 go 1.24.2
 

@@ -2,7 +2,7 @@
 # Visit https://goreleaser.com/customization/ for more options
 
 # Name of your project. It's used in the archive and binary names.
-project_name: go-replace
+project_name: photonsr
 
 # Environment variables that will be available during the build.
 # Useful if you need to pass secrets or configurations not suitable for the YAML file.
@@ -20,7 +20,7 @@ before:
 # Build configuration.
 builds:
   - # Unique ID for the build. Not strictly necessary for a single build config.
-    # id: go-replace
+    # id: photonsr
     # Environment variables specific to this build. CGO_ENABLED=0 is common for Go
     # to produce static binaries without C dependencies.
     env:
@@ -110,8 +110,8 @@ changelog:
 release:
   # GitHub repository details.
   github:
-    owner: arwahdevops # REPLACE with your GitHub username or organization
-    name: go-replace  # REPLACE with your repository name
+    owner: arwahdevops
+    name: PhotonSR
 
   # Optional: Create the release as a draft on GitHub instead of publishing immediately.
   # draft: true
@@ -137,7 +137,7 @@ release:
 
 # Optional: Homebrew tap configuration (for macOS/Linux users).
 # brews:
-#   - name: go-replace
+#   - name: photonsr
 #     tap:
 #       owner: arwahdevops # Your GitHub username/org
 #       name: homebrew-tap # Name of your tap repository (e.g., homebrew-tools)
@@ -148,22 +148,22 @@ release:
 #     #   name: goreleaserbot
 #     #   email: bot@goreleaser.com
 #     # Optional: URL to your project homepage.
-#     homepage: "https://github.com/arwahdevops/go-replace"
+#     homepage: "https://github.com/arwahdevops/PhotonSR"
 #     description: "CLI and TUI tool to search and replace text in files."
 #     license: "MIT"
 #     # Optional: Additional installation instructions for the formula.
 #     # install: |
-#     #   bin.install "go-replace"
+#     #   bin.install "photonsr"
 #     # Optional: Test block for the formula.
 #     # test: |
-#     #   system "#{bin}/go-replace -version"
+#     #   system "#{bin}/photonsr -version"
 
 # Optional: Scoop (for Windows users).
 # scoops:
-#   - name: go-replace
+#   - name: photonsr
 #     bucket:
 #       owner: arwahdevops # Your GitHub username/org
 #       name: scoop-bucket # Name of your Scoop bucket repository
-#     homepage: "https://github.com/arwahdevops/go-replace"
+#     homepage: "https://github.com/arwahdevops/PhotonSR"
 #     description: "CLI and TUI tool to search and replace text in files."
 #     license: "MIT"

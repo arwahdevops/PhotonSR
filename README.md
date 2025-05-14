@@ -1,4 +1,4 @@
-# go-replace
+# PhotonSR
 
 CLI and Interactive TUI tool written in Go to search and replace text in files recursively with backup/restore functionality.
 
@@ -8,7 +8,7 @@ CLI and Interactive TUI tool written in Go to search and replace text in files r
 
 ## 📝 Description
 
-**go-replace** is a powerful and user-friendly text replacement tool that allows you to:
+**PhotonSR** is a powerful and user-friendly text replacement tool that allows you to:
 - Replace text patterns in files across directories using command-line arguments.
 - **NEW:** Use an interactive Text User Interface (TUI) wizard for a guided experience.
 - Create automatic `.bak` backups before modifying files.
@@ -38,25 +38,25 @@ The TUI mode is particularly helpful for users who prefer a step-by-step process
 #### Method 1: From Source
 ```bash
 # Clone repository
-git clone https://github.com/arwahdevops/go-replace.git
-cd go-replace
+git clone https://github.com/arwahdevops/PhotonSR.git
+cd PhotonSR
 
 # Build and install
-go build -o go-replace ./cmd
-sudo mv go-replace /usr/local/bin/
+go build -o photonsr ./cmd
+sudo mv photonsr /usr/local/bin/
 ```
 
 #### Method 2: Go Install
 ```bash
-go install github.com/arwahdevops/go-replace@latest
+go install github.com/arwahdevops/PhotonSR@latest
 # The binary will be at $HOME/go/bin/go-replace
 # You might need to add $HOME/go/bin to your PATH or copy it:
-sudo cp $HOME/go/bin/go-replace /usr/local/bin/
+sudo cp $HOME/go/bin/PhotonSR /usr/local/bin/
 ```
 
 ## 🚀 Usage
 
-`go-replace` can be run in two modes: **CLI Mode** (using command-line flags) or **Wizard Mode** (interactive TUI).
+`PhotonSR` can be run in two modes: **CLI Mode** (using command-line flags) or **Wizard Mode** (interactive TUI).
 
 ### 🧙 Wizard Mode (Interactive TUI)
 
@@ -64,11 +64,11 @@ This is the recommended mode for ease of use. It will guide you through the step
 
 To start the wizard mode, simply run:
 ```bash
-go-replace
+photonsr
 ```
 Or explicitly:
 ```bash
-go-replace -wizard
+photonsr -wizard
 ```
 
 The wizard will prompt you for the action (Replace, Restore, Clean), target directory, text, patterns, and other necessary options.
@@ -79,9 +79,9 @@ Use command-line flags for scripting or if you prefer direct commands.
 
 #### Basic Command Structure
 ```bash
-go-replace [OPTIONS] -old "OLD_TEXT" -new "NEW_TEXT"
-go-replace [OPTIONS] -restore
-go-replace [OPTIONS] -clean
+photonsr [OPTIONS] -old "OLD_TEXT" -new "NEW_TEXT"
+photonsr [OPTIONS] -restore
+photonsr [OPTIONS] -clean
 ```
 
 #### Common Options
@@ -103,31 +103,31 @@ go-replace [OPTIONS] -clean
 ### 1. Simple Replacement (CLI)
 Replaces "foo" with "bar" in all `.md` files within the `docs` directory.
 ```bash
-go-replace -dir docs -pattern "*.md" -old "foo" -new "bar"
+photonsr -dir docs -pattern "*.md" -old "foo" -new "bar"
 ```
 
 ### 2. Safe Replacement with Backup (CLI)
 Replaces "http://" with "https://" in all files (default pattern `*`) within the `src` directory, creating backups first.
 ```bash
-go-replace -dir src -old "http://" -new "https://" -backup
+photonsr -dir src -old "http://" -new "https://" -backup
 ```
 
 ### 3. Restore Files (CLI)
 Restores original files from `.bak` files in the `project` directory.
 ```bash
-go-replace -dir project -restore
+photonsr -dir project -restore
 ```
 
 ### 4. Clean Backups (CLI)
 Deletes all `.bak` files from the `data` directory.
 ```bash
-go-replace -dir data -clean
+photonsr -dir data -clean
 ```
 
 ### 5. Using Wizard Mode
 For any of the above operations, or if you're unsure about the flags, simply run:
 ```bash
-go-replace
+photonsr
 ```
 ...and follow the on-screen prompts.
 
