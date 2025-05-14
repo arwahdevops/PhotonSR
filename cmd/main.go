@@ -10,13 +10,13 @@ import (
 	tea "github.com/charmbracelet/bubbletea" // Bubble Tea TUI framework
 )
 
-// Global variables to be injected by ldflags during the build process (e.g., by GoReleaser).
+// Global variables to be injected by ldflags during the build process.
 // These provide versioning information for the compiled binary.
 var (
-	version = "dev"     // Default value if not overridden by ldflags. Represents the application version.
-	commit  = "none"    // Default value. Represents the Git commit hash.
-	date    = "unknown" // Default value. Represents the build date.
-	builtBy = "unknown" // Default value. Represents who or what built the binary (e.g., "goreleaser").
+	version = "dev"     // Application version.
+	commit  = "none"    // Git commit hash.
+	date    = "unknown" // Build date.
+	builtBy = "unknown" // Who or what built the binary (e.g., "goreleaser").
 )
 
 // --- Core Logic Functions ---
@@ -41,6 +41,12 @@ type ReplaceOptions struct {
 //   - error: An error if a fatal issue occurred (e.g., invalid pattern during walk setup)
 //            or the first non-fatal error encountered during individual file processing.
 func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
+	// Critical validation: OldText cannot be empty as it would lead to unintended behavior.
+	// This should ideally be caught by CLI or TUI input validation before reaching this core function.
+	if opts.OldText == "" {
+		return nil, 0, fmt.Errorf("text to replace (OldText) cannot be empty")
+	}
+
 	modifiedFiles := []string{}
 	filesProcessed := 0
 	var firstEncounteredError error // Stores the first non-fatal error encountered during the walk.
@@ -51,19 +57,21 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 			if firstEncounteredError == nil {
 				firstEncounteredError = accessErr
 			}
+			// Log non-fatal error and skip this path.
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformReplacement - Access): %v. Skipping.\n", accessErr)
 			return nil
 		}
 		if info.IsDir() {
-			return nil
+			return nil // Skip directories.
 		}
 
 		matched, matchErr := matchesPattern(info.Name(), opts.Pattern)
 		if matchErr != nil {
+			// This is a fatal error for the walk as the pattern itself is invalid.
 			return fmt.Errorf("invalid file pattern '%s': %w", opts.Pattern, matchErr)
 		}
 		if !matched {
-			return nil
+			return nil // File does not match the pattern.
 		}
 
 		filesProcessed++
@@ -74,6 +82,7 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 				if firstEncounteredError == nil {
 					firstEncounteredError = backupErr
 				}
+				// Log non-fatal error and continue, but without backup for this specific file.
 				fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformReplacement - Backup): %v. Continuing without backup for this file.\n", backupErr)
 			}
 		}
@@ -103,10 +112,10 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 		return nil
 	})
 
-	if walkErr != nil {
+	if walkErr != nil { // This captures errors returned directly from the WalkFunc that halt the walk (e.g., invalid pattern).
 		return modifiedFiles, filesProcessed, walkErr
 	}
-	return modifiedFiles, filesProcessed, firstEncounteredError
+	return modifiedFiles, filesProcessed, firstEncounteredError // Return any non-fatal errors encountered.
 }
 
 // PerformRestore restores files from .bak backups found in the given directory.
@@ -127,7 +136,7 @@ func PerformRestore(dir string) ([]string, error) {
 			return nil
 		}
 		if info.IsDir() || !strings.HasSuffix(info.Name(), ".bak") {
-			return nil
+			return nil // Skip directories and non-backup files.
 		}
 
 		originalPath := strings.TrimSuffix(path, ".bak")
@@ -137,7 +146,7 @@ func PerformRestore(dir string) ([]string, error) {
 				firstEncounteredError = renameErr
 			}
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformRestore - Rename): %v.\n", renameErr)
-			return nil
+			return nil // Continue with other files.
 		}
 		messages = append(messages, fmt.Sprintf("  - Restored: %s from %s", originalPath, path))
 		filesRestored++
@@ -172,7 +181,7 @@ func PerformClean(dir string) ([]string, error) {
 			return nil
 		}
 		if info.IsDir() || !strings.HasSuffix(info.Name(), ".bak") {
-			return nil
+			return nil // Skip directories and non-backup files.
 		}
 
 		if err := os.Remove(path); err != nil {
@@ -181,7 +190,7 @@ func PerformClean(dir string) ([]string, error) {
 				firstEncounteredError = removeErr
 			}
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformClean - Remove): %v.\n", removeErr)
-			return nil
+			return nil // Continue with other files.
 		}
 		messages = append(messages, fmt.Sprintf("  - Deleted backup: %s", path))
 		filesCleaned++
@@ -205,7 +214,7 @@ func PerformClean(dir string) ([]string, error) {
 // An empty pattern or "*" is treated as a wildcard matching all files.
 // Returns true if matched, false otherwise, and an error for malformed patterns.
 func matchesPattern(filename, pattern string) (bool, error) {
-	if pattern == "*" || pattern == "" {
+	if pattern == "" || pattern == "*" { // Common convention: empty or "*" pattern matches all.
 		return true, nil
 	}
 	return filepath.Match(pattern, filename)
@@ -237,38 +246,33 @@ func copyFile(src, dst string) error {
 // handles the -version flag, and decides whether to run in CLI mode
 // or launch the interactive TUI (wizard) mode.
 func main() {
-	// Define command-line flags for controlling the application's behavior.
-	dirFlag := flag.String("dir", ".", "Target directory for operations.")
-	patternFlag := flag.String("pattern", "*", "Filename pattern (e.g., *.txt) for -replace operation.")
+	// Define command-line flags.
+	dirFlag := flag.String("dir", ".", "Target directory for operations (default: current directory).")
+	patternFlag := flag.String("pattern", "*", "Filename pattern (e.g., *.txt) for -replace operation (default: *).")
 	oldTextFlag := flag.String("old", "", "Text to be replaced (required for -replace operation).")
 	newTextFlag := flag.String("new", "", "Text to replace with (for -replace operation).")
 	backupFlag := flag.Bool("backup", false, "Create .bak backup files before replacing text.")
 	restoreFlag := flag.Bool("restore", false, "Restore files from .bak backups.")
 	cleanFlag := flag.Bool("clean", false, "Delete all .bak backup files in the target directory.")
 	wizardFlag := flag.Bool("wizard", false, "Run in interactive wizard (TUI) mode.")
-	// Add a flag to show version information.
 	showVersion := flag.Bool("version", false, "Show application version and exit.")
 
-	flag.Parse() // Parse the command-line flags provided by the user.
+	flag.Parse() // Parse the command-line flags.
 
-	// Handle the -version flag. If present, print version info and exit.
+	// Handle the -version flag.
 	if *showVersion {
-		fmt.Printf("go-replace version: %s\n", version)
-		fmt.Printf("commit: %s\n", commit)
-		fmt.Printf("built_at: %s\n", date)
-		fmt.Printf("built_by: %s\n", builtBy)
+		fmt.Printf("PhotonSR version: %s\n", version)
+		fmt.Printf("Commit: %s\n", commit)
+		fmt.Printf("Built at: %s\n", date)
+		fmt.Printf("Built by: %s\n", builtBy)
 		os.Exit(0)
 	}
 
 	// Determine if wizard mode should be run.
 	runWizard := *wizardFlag
-	// Default to wizard mode if no specific operation flags are provided by the user
-	// and the -wizard flag isn't explicitly set. This provides a user-friendly
-	// default behavior when the tool is run without any arguments.
+	// Default to wizard mode if no specific operation flags are provided
+	// and -wizard flag isn't explicitly set to false.
 	if !*wizardFlag && !*restoreFlag && !*cleanFlag && *oldTextFlag == "" && len(flag.Args()) == 0 {
-		// Also check if -version was the only flag (already handled)
-		// This condition ensures that if only -version is passed, we don't default to wizard.
-		// However, the -version check above already exits, so this specific scenario is covered.
 		runWizard = true
 	}
 
@@ -279,14 +283,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error running interactive wizard: %v\n", err)
 			os.Exit(1)
 		}
-		os.Exit(0)
+		os.Exit(0) // TUI handles its own exit messages.
 	}
 
 	// --- CLI Mode Logic ---
-	// If not running in wizard mode, proceed with operations based on parsed CLI flags.
 	var operationMessages []string
 	var operationError error
-	var operationPerformed bool = true
+	operationPerformed := true // Assume an operation will be performed unless explicitly set false.
 
 	if *cleanFlag {
 		fmt.Fprintln(os.Stdout, "Cleaning backup files...")
@@ -294,7 +297,7 @@ func main() {
 	} else if *restoreFlag {
 		fmt.Fprintln(os.Stdout, "Restoring from backup files...")
 		operationMessages, operationError = PerformRestore(*dirFlag)
-	} else if *oldTextFlag != "" {
+	} else if *oldTextFlag != "" { // -old is required for replace operation.
 		fmt.Fprintln(os.Stdout, "Performing text replacement...")
 		opts := ReplaceOptions{
 			Dir:          *dirFlag,
@@ -307,34 +310,33 @@ func main() {
 		var filesProcessed int
 		modifiedFiles, filesProcessed, operationError = PerformReplacement(opts)
 
-		if operationError == nil || (operationError != nil && len(modifiedFiles) > 0) { 
-			if len(modifiedFiles) > 0 {
-				operationMessages = append(operationMessages, "Successfully modified files:")
-				for _, f := range modifiedFiles {
-					operationMessages = append(operationMessages, fmt.Sprintf("  - %s", f))
-				}
-			} else if filesProcessed > 0 {
-				operationMessages = append(operationMessages, "No files matched the criteria or required modification.")
-			} else {
-				operationMessages = append(operationMessages, "No files found in the specified directory or matching the pattern.")
+		// Construct messages even if there was a non-fatal error, as some files might still have been processed.
+		if len(modifiedFiles) > 0 {
+			operationMessages = append(operationMessages, "Successfully modified files:")
+			for _, f := range modifiedFiles {
+				operationMessages = append(operationMessages, fmt.Sprintf("  - %s", f))
 			}
+		} else if filesProcessed > 0 && operationError == nil {
+			// Files were processed (matched pattern) but none contained OldText or required modification.
+			operationMessages = append(operationMessages, "No files matched the criteria or required modification (old text not found).")
+		} else if operationError == nil {
+			// No files processed and no error (e.g., directory empty or no files matched pattern).
+			operationMessages = append(operationMessages, "No files found in the specified directory or matching the pattern.")
 		}
+		// If operationError is not nil, it will be printed later.
 	} else {
-		// This block is reached if no primary operation flag (-clean, -restore, -old) was given
-		// AND it wasn't defaulted to wizard mode (e.g., if an unknown flag was passed but no operation).
+		// No primary operation flag (-clean, -restore, -old) was given.
 		operationPerformed = false
-		if len(flag.Args()) > 0 {
+		if len(flag.Args()) > 0 { // Check for unknown arguments.
 			fmt.Fprintln(os.Stderr, "Error: Unknown arguments provided. Use flags to specify operations.")
 		}
-		// The -version flag would have already caused an exit, so if we reach here without an operation,
-		// it's likely a usage error or just no action requested via CLI.
-		// If runWizard was false (e.g. -wizard=false was explicitly passed) and no other ops, then this path is valid.
+		// If -version was already handled, or if user explicitly passed -wizard=false without other ops.
 		fmt.Fprintln(os.Stderr, "No operation specified. Use -wizard for interactive mode, or provide operation flags (e.g., -old, -restore, -clean, -version).")
-		flag.Usage()
+		flag.Usage() // Print usage information.
 		os.Exit(1)
 	}
 
-	// Output the results and status for CLI mode operations.
+	// Output results and status for CLI mode operations.
 	if operationPerformed {
 		for _, msg := range operationMessages {
 			fmt.Fprintln(os.Stdout, msg)
@@ -342,7 +344,7 @@ func main() {
 		if operationError != nil {
 			fmt.Fprintf(os.Stderr, "\nOperation completed with errors: %v\n", operationError)
 			os.Exit(1)
-		} else if len(operationMessages) > 0 {
+		} else if len(operationMessages) > 0 || (*cleanFlag || *restoreFlag) { // Check if any message or non-replace op ran
 			fmt.Fprintln(os.Stdout, "\nOperation completed successfully.")
 		}
 	}

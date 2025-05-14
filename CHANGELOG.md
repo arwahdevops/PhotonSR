@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 ### Security
 
-## [1.0.1] - 2025-05-15
+## [0.1.0] - 2025-05-15
 
 ### Added
 - Initial release of `photonsr`.
@@ -30,5 +30,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved error messages in TUI for invalid inputs.
 - Refined TUI navigation and user experience.
 
-[Unreleased]: https://github.com/arwahdevops/go-replace/compare/v1.0.1...HEAD
-[1.0.1]: https://github.com/arwahdevops/go-replace/releases/tag/v1.0.1
+[Unreleased]: https://github.com/arwahdevops/PhotonSR/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/arwahdevops/PhotonSR/releases/tag/v0.1.0

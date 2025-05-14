@@ -29,7 +29,7 @@ builds:
     main: ./cmd/
     # Binary name template. {{.ProjectName}} is replaced by project_name.
     # For more complex scenarios, you might use {{.Binary}} which defaults to project_name.
-    binary: '{{ .ProjectName }}' # Resulting binary will be 'go-replace'
+    binary: '{{ .ProjectName }}' # Resulting binary will be 'photonsr'
     # ldflags are used to inject variables into your Go binary at build time.
     # Useful for versioning. Assumes you have 'version', 'commit', and 'date'
     # variables in your 'main' package.

@@ -49,7 +49,7 @@ sudo mv photonsr /usr/local/bin/
 #### Method 2: Go Install
 ```bash
 go install github.com/arwahdevops/PhotonSR@latest
-# The binary will be at $HOME/go/bin/go-replace
+# The binary will be at $HOME/go/bin/photonsr
 # You might need to add $HOME/go/bin to your PATH or copy it:
 sudo cp $HOME/go/bin/PhotonSR /usr/local/bin/
 ```
@@ -96,7 +96,7 @@ photonsr [OPTIONS] -clean
 | `-restore`   |       | Restore files from `.bak` backups                 | Restore             |
 | `-clean`     |       | Delete all `.bak` files in the target directory   | Clean               |
 
-**Note:** If `go-replace` is run without any operation flags (`-old`, `-restore`, `-clean`) and `-wizard` is not specified, it will default to launching the **Wizard Mode**.
+**Note:** If `photonsr` is run without any operation flags (`-old`, `-restore`, `-clean`) and `-wizard` is not specified, it will default to launching the **Wizard Mode**.
 
 ## 💡 Examples
 
@@ -155,7 +155,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check [issues page](https://github.com/arwahdevops/go-replace/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check [issues page](https://github.com/arwahdevops/photonsr/issues).
 (Consider adding a CONTRIBUTING.md if you have specific guidelines)
 
 ## 🙏 Acknowledgements
