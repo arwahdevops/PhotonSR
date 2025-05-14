@@ -1,0 +1,169 @@
+# .goreleaser.yml
+# Visit https://goreleaser.com/customization/ for more options
+
+# Name of your project. It's used in the archive and binary names.
+project_name: go-replace
+
+# Environment variables that will be available during the build.
+# Useful if you need to pass secrets or configurations not suitable for the YAML file.
+# env:
+#   - GO111MODULE=on
+
+# Executed before the build. Useful for generating code, vendoring, etc.
+before:
+  hooks:
+    # Ensure dependencies are tidy.
+    - go mod tidy
+    # You could run linters or tests here if desired, though CI is often better for that.
+    # - go test ./...
+
+# Build configuration.
+builds:
+  - # Unique ID for the build. Not strictly necessary for a single build config.
+    # id: go-replace
+    # Environment variables specific to this build. CGO_ENABLED=0 is common for Go
+    # to produce static binaries without C dependencies.
+    env:
+      - CGO_ENABLED=0
+    # Main Go package to build. '.' means the root of the repository.
+    master: ./cmd/
+    # Binary name template. {{.ProjectName}} is replaced by project_name.
+    # For more complex scenarios, you might use {{.Binary}} which defaults to project_name.
+    binary: '{{ .ProjectName }}' # Resulting binary will be 'go-replace'
+    # ldflags are used to inject variables into your Go binary at build time.
+    # Useful for versioning. Assumes you have 'version', 'commit', and 'date'
+    # variables in your 'main' package.
+    ldflags:
+      - -s -w # -s strips symbol table, -w omits DWARF debug info (smaller binaries)
+      - -X main.version={{.Version}}    # {{.Version}} is the Git tag
+      - -X main.commit={{.Commit}}      # {{.Commit}} is the short Git commit hash
+      - -X main.date={{.Date}}          # {{.Date}} is the build date
+      - -X main.builtBy=goreleaser    # Example of another custom variable
+    # Target platforms (OS and architecture combinations).
+    goos:
+      - linux
+      - windows
+      - darwin # macOS
+    goarch:
+      - amd64 # Intel/AMD 64-bit
+      - arm64 # ARM 64-bit (e.g., Apple Silicon, Raspberry Pi 64-bit)
+    # Optional: Ignore specific OS/Arch combinations if they don't make sense
+    # ignore:
+    #   - goos: windows
+    #     goarch: arm64 # If you don't intend to support Windows on ARM64 for this tool
+
+# Archive configuration (how binaries are packaged, e.g., .zip, .tar.gz).
+archives:
+  - # Unique ID for the archive definition.
+    # id: default
+    # Name template for the archive files.
+    # {{.ProjectName}}, {{.Version}}, {{.Os}}, {{.Arch}}, {{.Tag}} are available.
+    name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}'
+    # Default format for archives.
+    format: tar.gz
+    # Override the format for specific OS. Windows users often prefer .zip.
+    format_overrides:
+      - goos: windows
+        format: zip
+    # Files to include in the archive in addition to the binary.
+    # Paths are relative to the project root.
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md # Include the changelog in the archive
+
+# Checksum generation for the archives.
+checksum:
+  # Name template for the checksum file.
+  name_template: 'checksums.txt'
+  # Algorithm for checksum (sha256 is common and secure).
+  algorithm: sha256
+
+# Snapshot releases are for builds from non-tagged commits (e.g., main branch).
+# Useful for providing nightly/dev builds.
+snapshot:
+  # Name template for snapshot versions.
+  # {{.ShortCommit}} is the short Git commit hash.
+  # {{.Timestamp}} can also be used.
+  # 'incpatch' increments the patch version of the latest tag.
+  name_template: "{{ incpatch .Tag }}-next-{{.ShortCommit}}"
+
+# Changelog generation configuration.
+# GoReleaser can generate a changelog from Git commit messages.
+changelog:
+  # Sort order for changes (asc or desc by commit date).
+  sort: asc
+  # Filters to exclude certain commit messages from the changelog.
+  # Useful for excluding chore/docs/test commits.
+  # Assumes a commit message convention (e.g., Conventional Commits).
+  filters:
+    exclude:
+      - '^docs:' # Exclude commits starting with 'docs:'
+      - '^test:' # Exclude commits starting with 'test:'
+      - '^ci:'   # Exclude CI related commits
+      - '^chore:' # Exclude chore commits
+      - 'Merge pull request' # Exclude default merge commit messages
+      - 'Merge branch'
+
+# GitHub Release configuration.
+# This section defines how GoReleaser interacts with GitHub Releases.
+release:
+  # GitHub repository details.
+  github:
+    owner: arwahdevops # REPLACE with your GitHub username or organization
+    name: go-replace  # REPLACE with your repository name
+
+  # Optional: Create the release as a draft on GitHub instead of publishing immediately.
+  # draft: true
+
+  # Optional: Mark as a pre-release if the Git tag indicates it (e.g., v1.0.0-beta).
+  # 'auto' will set it if the tag has a pre-release identifier.
+  # prerelease: auto
+
+  # Optional: Name template for the GitHub Release title.
+  # Defaults to the Git tag (e.g., "v1.0.0").
+  # name_template: "{{.Tag}} - {{.ProjectName}}"
+
+  # Optional: Provide a custom header for the release notes.
+  # header: |
+  #   ## Installation
+  #   Download the binary for your system from the assets below.
+  #   Verify the checksum using the `checksums.txt` file.
+
+  # Optional: Provide a custom footer for the release notes.
+  # footer: |
+  #   ---
+  #   Released by GoReleaser
+
+# Optional: Homebrew tap configuration (for macOS/Linux users).
+# brews:
+#   - name: go-replace
+#     tap:
+#       owner: arwahdevops # Your GitHub username/org
+#       name: homebrew-tap # Name of your tap repository (e.g., homebrew-tools)
+#       # Optional: branch for the tap, defaults to main/master
+#       # branch: main 
+#     # Optional: Commit author for the tap formula.
+#     # commit_author:
+#     #   name: goreleaserbot
+#     #   email: bot@goreleaser.com
+#     # Optional: URL to your project homepage.
+#     homepage: "https://github.com/arwahdevops/go-replace"
+#     description: "CLI and TUI tool to search and replace text in files."
+#     license: "MIT"
+#     # Optional: Additional installation instructions for the formula.
+#     # install: |
+#     #   bin.install "go-replace"
+#     # Optional: Test block for the formula.
+#     # test: |
+#     #   system "#{bin}/go-replace -version"
+
+# Optional: Scoop (for Windows users).
+# scoops:
+#   - name: go-replace
+#     bucket:
+#       owner: arwahdevops # Your GitHub username/org
+#       name: scoop-bucket # Name of your Scoop bucket repository
+#     homepage: "https://github.com/arwahdevops/go-replace"
+#     description: "CLI and TUI tool to search and replace text in files."
+#     license: "MIT"
