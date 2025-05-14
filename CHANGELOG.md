@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command-Line Interface (CLI) mode for all operations.
 - Interactive Text User Interface (TUI) wizard mode (`-wizard` or default on no args).
 - Basic input validation for directory, pattern, and required fields in TUI mode.
-- Version flag (`-version`) to display application version, commit, and build date.
+- Version flag (`-version`) to display application version, commit, and build date
 ### Changed
 - Improved error messages in TUI for invalid inputs.
 - Refined TUI navigation and user experience.
