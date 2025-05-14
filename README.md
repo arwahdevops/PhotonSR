@@ -3,7 +3,7 @@
 CLI and Interactive TUI tool written in Go to search and replace text in files recursively with backup/restore functionality.
 
 ![GitHub](https://img.shields.io/badge/License-MIT-blue)
-![Go](https://img.shields.io/badge/Go-1.19%2B-success) <!-- Update Go version if necessary -->
+![Go](https://img.shields.io/badge/Go-1.24.2%2B-success)
 ![Mode](https://img.shields.io/badge/Mode-CLI%20%26%20TUI-informational)
 
 ## 📝 Description
@@ -31,7 +31,7 @@ The TUI mode is particularly helpful for users who prefer a step-by-step process
 ## 📥 Installation
 
 ### Prerequisites
-- Go 1.19 or newer (update this if your `go.mod` specifies a newer version).
+- Go 1.24.2 or newer (update this if your `go.mod` specifies a newer version).
 
 ### Linux Installation (and other Unix-like systems)
 
@@ -42,7 +42,7 @@ git clone https://github.com/arwahdevops/go-replace.git
 cd go-replace
 
 # Build and install
-go build -o go-replace
+go build -o go-replace ./cmd
 sudo mv go-replace /usr/local/bin/
 ```
 
