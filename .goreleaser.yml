@@ -9,7 +9,7 @@ before:
 
 builds:
   - id: photonsr
-    main: ./cmd/main.go
+    main: ./cmd/
     binary: photonsr
     ldflags:
       - -s -w
