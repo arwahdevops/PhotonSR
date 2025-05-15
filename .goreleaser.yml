@@ -1,169 +1,144 @@
 # .goreleaser.yml
-# Visit https://goreleaser.com/customization/ for more options
+# Ganti 'your_github_username' dengan username GitHub Anda jika berbeda dari 'arwahdevops'
+# Ganti 'PhotonSR' dengan nama repo Anda jika berbeda
 
-# Name of your project. It's used in the archive and binary names.
-project_name: photonsr
+# Nama proyek Anda (biasanya nama repo)
+project_name: PhotonSR
 
-# Environment variables that will be available during the build.
-# Useful if you need to pass secrets or configurations not suitable for the YAML file.
-# env:
-#   - GO111MODULE=on
+# Variabel lingkungan global yang berlaku untuk semua build
+env:
+  - CGO_ENABLED=0 # Umumnya disarankan untuk cross-compilation yang lebih mudah
 
-# Executed before the build. Useful for generating code, vendoring, etc.
+# Hook yang dijalankan sebelum proses build utama
 before:
   hooks:
-    # Ensure dependencies are tidy.
-    - go mod tidy
-    # You could run linters or tests here if desired, though CI is often better for that.
-    # - go test ./...
+    - go mod tidy # Pastikan dependensi bersih
+    # - go generate ./... # Uncomment jika Anda menggunakan go generate
 
-# Build configuration.
+# Konfigurasi untuk build biner
 builds:
-  - # Unique ID for the build. Not strictly necessary for a single build config.
-    # id: photonsr
-    # Environment variables specific to this build. CGO_ENABLED=0 is common for Go
-    # to produce static binaries without C dependencies.
-    env:
-      - CGO_ENABLED=0
-    # Main Go package to build. '.' means the root of the repository.
-    main: ./cmd/
-    # Binary name template. {{.ProjectName}} is replaced by project_name.
-    # For more complex scenarios, you might use {{.Binary}} which defaults to project_name.
-    binary: '{{ .ProjectName }}' # Resulting binary will be 'photonsr'
-    # ldflags are used to inject variables into your Go binary at build time.
-    # Useful for versioning. Assumes you have 'version', 'commit', and 'date'
-    # variables in your 'main' package.
+  - # Konfigurasi build utama
+    id: photonsr # ID unik untuk build ini (opsional jika hanya satu)
+    main: ./cmd/main.go # Path ke package main Anda
+    binary: photonsr # Nama biner yang dihasilkan (tanpa ekstensi)
+    # Variabel yang disuntikkan saat build menggunakan ldflags
+    # GoReleaser menyediakan template variabel seperti .Version, .Commit, .Date
     ldflags:
-      - -s -w # -s strips symbol table, -w omits DWARF debug info (smaller binaries)
-      - -X main.version={{.Version}}    # {{.Version}} is the Git tag
-      - -X main.commit={{.Commit}}      # {{.Commit}} is the short Git commit hash
-      - -X main.date={{.Date}}          # {{.Date}} is the build date
-      - -X main.builtBy=goreleaser    # Example of another custom variable
-    # Target platforms (OS and architecture combinations).
+      - -s -w # Menghilangkan simbol debug dan DWARF untuk ukuran biner yang lebih kecil
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    # Target sistem operasi dan arsitektur
     goos:
       - linux
       - windows
       - darwin # macOS
     goarch:
-      - amd64 # Intel/AMD 64-bit
-      - arm64 # ARM 64-bit (e.g., Apple Silicon, Raspberry Pi 64-bit)
-    # Optional: Ignore specific OS/Arch combinations if they don't make sense
-    # ignore:
-    #   - goos: windows
-    #     goarch: arm64 # If you don't intend to support Windows on ARM64 for this tool
+      - amd64
+      - arm64
+    # Untuk ARM 32-bit jika diperlukan (misalnya Raspberry Pi)
+    # goarm:
+    #   - '6'
+    #   - '7'
 
-# Archive configuration (how binaries are packaged, e.g., .zip, .tar.gz).
+# Konfigurasi untuk membuat arsip (zip/tar.gz)
 archives:
-  - # Unique ID for the archive definition.
-    # id: default
-    # Name template for the archive files.
-    # {{.ProjectName}}, {{.Version}}, {{.Os}}, {{.Arch}}, {{.Tag}} are available.
-    name_template: '{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}'
-    # Default format for archives.
-    format: tar.gz
-    # Override the format for specific OS. Windows users often prefer .zip.
-    format_overrides:
-      - goos: windows
-        format: zip
-    # Files to include in the archive in addition to the binary.
-    # Paths are relative to the project root.
+  - # Konfigurasi arsip utama
+    id: default
+    # Format arsip (GoReleaser akan memilih zip untuk Windows dan tar.gz untuk lainnya secara default)
+    # format: binary # Jika Anda hanya ingin mengunggah biner tanpa arsip
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    # File tambahan yang akan disertakan dalam arsip
     files:
       - LICENSE
       - README.md
-      - CHANGELOG.md # Include the changelog in the archive
+      - CHANGELOG.md
+    # Penggantian string dalam nama arsip (opsional)
+    # replacements:
+    #   darwin: macOS
+    #   amd64: x86_64
 
-# Checksum generation for the archives.
+# Konfigurasi untuk membuat checksum
 checksum:
-  # Name template for the checksum file.
   name_template: 'checksums.txt'
-  # Algorithm for checksum (sha256 is common and secure).
-  algorithm: sha256
+  algorithm: sha256 # Algoritma checksum yang umum digunakan
 
-# Snapshot releases are for builds from non-tagged commits (e.g., main branch).
-# Useful for providing nightly/dev builds.
+# Konfigurasi untuk rilis (snapshot/pre-release) yang dibuat dari commit di branch default (biasanya main/master)
 snapshot:
-  # Name template for snapshot versions.
-  # {{.ShortCommit}} is the short Git commit hash.
-  # {{.Timestamp}} can also be used.
-  # 'incpatch' increments the patch version of the latest tag.
-  name_template: "{{ incpatch .Tag }}-next-{{.ShortCommit}}"
+  name_template: "{{ incpatch .Version }}-next" # Misal: v0.1.0 -> v0.1.1-next
+  # Atau bisa juga: name_template: "{{ .ShortCommit }}"
 
-# Changelog generation configuration.
-# GoReleaser can generate a changelog from Git commit messages.
-changelog:
-  # Sort order for changes (asc or desc by commit date).
-  sort: asc
-  # Filters to exclude certain commit messages from the changelog.
-  # Useful for excluding chore/docs/test commits.
-  # Assumes a commit message convention (e.g., Conventional Commits).
-  filters:
-    exclude:
-      - '^docs:' # Exclude commits starting with 'docs:'
-      - '^test:' # Exclude commits starting with 'test:'
-      - '^ci:'   # Exclude CI related commits
-      - '^chore:' # Exclude chore commits
-      - 'Merge pull request' # Exclude default merge commit messages
-      - 'Merge branch'
-
-# GitHub Release configuration.
-# This section defines how GoReleaser interacts with GitHub Releases.
+# Konfigurasi untuk membuat GitHub/GitLab/Gitea Release
 release:
-  # GitHub repository details.
+  # Konfigurasi untuk GitHub Releases
   github:
-    owner: arwahdevops
-    name: PhotonSR
+    owner: arwahdevops # Username atau organisasi GitHub pemilik repositori
+    name: PhotonSR # Nama repositori
+    # Jika true, rilis akan dibuat sebagai draft
+    draft: false
+    # Jika true, rilis akan ditandai sebagai pre-release.
+    # 'auto' akan menandainya sebagai pre-release jika versi mengandung kata seperti 'alpha', 'beta', 'rc'.
+    prerelease: auto
+    # PENTING: Izinkan GoReleaser menimpa aset yang sudah ada dengan nama yang sama di rilis
+    overwrite: true
+    # Template untuk judul rilis. {{.Tag}} adalah tag Git (misalnya v0.2.0)
+    name_template: "{{.ProjectName}} {{.Tag}}"
+    # Opsi untuk mengganti aset jika rilis sudah ada (deprecated, gunakan overwrite di atas)
+    # replace_existing_draft: true # Hanya untuk draft
+  # Jika Anda ingin memposting ke layanan lain, konfigurasikan di sini
+  # gitlab:
+  #   owner: your_gitlab_username
+  #   name: PhotonSR
+  #   overwrite: true
+  # gitea:
+  #   owner: ...
+  #   name: ...
+  #   overwrite: true
 
-  # Optional: Create the release as a draft on GitHub instead of publishing immediately.
-  # draft: true
+# Konfigurasi untuk menghasilkan changelog dari commit Git
+changelog:
+  sort: asc # Urutkan entri changelog (asc/desc)
+  filters:
+    # Kecualikan commit tertentu dari changelog
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'Merge pull request'
+      - 'Merge branch'
+      - '(?i)skip changelog' # Jika ada commit dengan "skip changelog" di pesannya
+  # Grup commit berdasarkan prefix (opsional)
+  # groups:
+  #   - title: Features
+  #     regexp: "^feat[(\\w)]*:\\s*"
+  #     order: 0
+  #   - title: Bug Fixes
+  #     regexp: "^fix[(\\w)]*:\\s*"
+  #     order: 1
+  #   - title: Others
+  #     order: 999
 
-  # Optional: Mark as a pre-release if the Git tag indicates it (e.g., v1.0.0-beta).
-  # 'auto' will set it if the tag has a pre-release identifier.
-  # prerelease: auto
+# Jika Anda ingin menandatangani rilis Anda (opsional)
+# sign:
+#   artifacts: checksum
+#   args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
 
-  # Optional: Name template for the GitHub Release title.
-  # Defaults to the Git tag (e.g., "v1.0.0").
-  # name_template: "{{.Tag}} - {{.ProjectName}}"
+# Jika Anda mempublikasikan ke Docker (opsional)
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
+#       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
+#     goos: linux
+#     goarch: amd64
+#     # Path ke Dockerfile Anda
+#     dockerfile: Dockerfile
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
 
-  # Optional: Provide a custom header for the release notes.
-  # header: |
-  #   ## Installation
-  #   Download the binary for your system from the assets below.
-  #   Verify the checksum using the `checksums.txt` file.
-
-  # Optional: Provide a custom footer for the release notes.
-  # footer: |
-  #   ---
-  #   Released by GoReleaser
-
-# Optional: Homebrew tap configuration (for macOS/Linux users).
-# brews:
-#   - name: photonsr
-#     tap:
-#       owner: arwahdevops # Your GitHub username/org
-#       name: homebrew-tap # Name of your tap repository (e.g., homebrew-tools)
-#       # Optional: branch for the tap, defaults to main/master
-#       # branch: main 
-#     # Optional: Commit author for the tap formula.
-#     # commit_author:
-#     #   name: goreleaserbot
-#     #   email: bot@goreleaser.com
-#     # Optional: URL to your project homepage.
-#     homepage: "https://github.com/arwahdevops/PhotonSR"
-#     description: "CLI and TUI tool to search and replace text in files."
-#     license: "MIT"
-#     # Optional: Additional installation instructions for the formula.
-#     # install: |
-#     #   bin.install "photonsr"
-#     # Optional: Test block for the formula.
-#     # test: |
-#     #   system "#{bin}/photonsr -version"
-
-# Optional: Scoop (for Windows users).
-# scoops:
-#   - name: photonsr
-#     bucket:
-#       owner: arwahdevops # Your GitHub username/org
-#       name: scoop-bucket # Name of your Scoop bucket repository
-#     homepage: "https://github.com/arwahdevops/PhotonSR"
-#     description: "CLI and TUI tool to search and replace text in files."
-#     license: "MIT"
+# Modelines (opsional, untuk editor seperti Vim)
+# vim: set ts=2 sw=2 tw=0 fo=cnqrow:
