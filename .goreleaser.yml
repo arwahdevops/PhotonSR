@@ -26,7 +26,7 @@ builds:
     env:
       - CGO_ENABLED=0
     # Main Go package to build. '.' means the root of the repository.
-    main: ./cmd/
+    main: ./cmd/main.go
     # Binary name template. {{.ProjectName}} is replaced by project_name.
     # For more complex scenarios, you might use {{.Binary}} which defaults to project_name.
     binary: '{{ .ProjectName }}' # Resulting binary will be 'photonsr'
