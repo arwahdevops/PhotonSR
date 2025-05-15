@@ -11,7 +11,6 @@ import (
 )
 
 // Global variables to be injected by ldflags during the build process.
-// These provide versioning information for the compiled binary.
 var (
 	version = "dev"     // Application version.
 	commit  = "none"    // Git commit hash.
@@ -20,8 +19,6 @@ var (
 )
 
 // --- Core Logic Functions ---
-// These functions perform the actual file operations. They are called
-// by both the CLI mode and the TUI mode (via tui.go).
 
 // ReplaceOptions holds all parameters for the text replacement operation.
 type ReplaceOptions struct {
@@ -33,23 +30,18 @@ type ReplaceOptions struct {
 }
 
 // PerformReplacement is the core function for searching and replacing text in files.
-// It walks the specified directory, filters files by pattern, reads their content,
-// performs the replacement, and writes the changes back.
 // Returns:
 //   - []string: A slice of paths to files that were actually modified.
-//   - int: The total number of files that matched the pattern and were processed.
-//   - error: An error if a fatal issue occurred (e.g., invalid pattern during walk setup)
-//            or the first non-fatal error encountered during individual file processing.
+//   - int: The total number of files that matched the pattern and were processed (read attempt).
+//   - error: An error if a fatal issue occurred or the first non-fatal error.
 func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
-	// Critical validation: OldText cannot be empty as it would lead to unintended behavior.
-	// This should ideally be caught by CLI or TUI input validation before reaching this core function.
 	if opts.OldText == "" {
 		return nil, 0, fmt.Errorf("text to replace (OldText) cannot be empty")
 	}
 
 	modifiedFiles := []string{}
-	filesProcessed := 0
-	var firstEncounteredError error // Stores the first non-fatal error encountered during the walk.
+	filesProcessed := 0 // Counts files that matched the pattern and were attempted to be read
+	var firstEncounteredError error
 
 	walkErr := filepath.Walk(opts.Dir, func(path string, info os.FileInfo, errInWalk error) error {
 		if errInWalk != nil {
@@ -57,24 +49,22 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 			if firstEncounteredError == nil {
 				firstEncounteredError = accessErr
 			}
-			// Log non-fatal error and skip this path.
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformReplacement - Access): %v. Skipping.\n", accessErr)
 			return nil
 		}
 		if info.IsDir() {
-			return nil // Skip directories.
+			return nil
 		}
 
 		matched, matchErr := matchesPattern(info.Name(), opts.Pattern)
 		if matchErr != nil {
-			// This is a fatal error for the walk as the pattern itself is invalid.
 			return fmt.Errorf("invalid file pattern '%s': %w", opts.Pattern, matchErr)
 		}
 		if !matched {
-			return nil // File does not match the pattern.
+			return nil
 		}
 
-		filesProcessed++
+		filesProcessed++ // Increment when a file matches the pattern and will be processed
 
 		if opts.ShouldBackup {
 			if err := createBackup(path); err != nil {
@@ -82,7 +72,6 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 				if firstEncounteredError == nil {
 					firstEncounteredError = backupErr
 				}
-				// Log non-fatal error and continue, but without backup for this specific file.
 				fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformReplacement - Backup): %v. Continuing without backup for this file.\n", backupErr)
 			}
 		}
@@ -112,16 +101,18 @@ func PerformReplacement(opts ReplaceOptions) ([]string, int, error) {
 		return nil
 	})
 
-	if walkErr != nil { // This captures errors returned directly from the WalkFunc that halt the walk (e.g., invalid pattern).
+	if walkErr != nil {
 		return modifiedFiles, filesProcessed, walkErr
 	}
-	return modifiedFiles, filesProcessed, firstEncounteredError // Return any non-fatal errors encountered.
+	return modifiedFiles, filesProcessed, firstEncounteredError
 }
 
-// PerformRestore restores files from .bak backups found in the given directory.
-// It renames .bak files to their original names, overwriting existing files if necessary.
-// Returns a slice of messages detailing actions taken and any error encountered.
-func PerformRestore(dir string) ([]string, error) {
+// PerformRestore restores files from .bak backups.
+// Returns:
+//   - []string: Slice of messages detailing individual actions taken.
+//   - int: Number of files successfully restored.
+//   - error: The first non-fatal error encountered or walk error.
+func PerformRestore(dir string) ([]string, int, error) {
 	var messages []string
 	var firstEncounteredError error
 	filesRestored := 0
@@ -136,7 +127,7 @@ func PerformRestore(dir string) ([]string, error) {
 			return nil
 		}
 		if info.IsDir() || !strings.HasSuffix(info.Name(), ".bak") {
-			return nil // Skip directories and non-backup files.
+			return nil
 		}
 
 		originalPath := strings.TrimSuffix(path, ".bak")
@@ -146,7 +137,7 @@ func PerformRestore(dir string) ([]string, error) {
 				firstEncounteredError = renameErr
 			}
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformRestore - Rename): %v.\n", renameErr)
-			return nil // Continue with other files.
+			return nil
 		}
 		messages = append(messages, fmt.Sprintf("  - Restored: %s from %s", originalPath, path))
 		filesRestored++
@@ -154,19 +145,26 @@ func PerformRestore(dir string) ([]string, error) {
 	})
 
 	if walkErr != nil {
-		return messages, walkErr
+		return messages, filesRestored, walkErr
 	}
-	if filesRestored == 0 && firstEncounteredError == nil {
+	// Summary message for "no files found" is now primarily handled by the caller (CLI/TUI)
+	// based on filesRestored count and error state. This function returns the raw data.
+	// However, if this function were to be used standalone, a "no files found" message here might be useful.
+	// For now, we keep it lean. The TUI/CLI will explicitly check filesRestored.
+	if filesRestored == 0 && firstEncounteredError == nil && walkErr == nil {
+		// This explicit message can be useful if this function is called directly
+		// and the caller doesn't build its own summary.
 		messages = append(messages, "No .bak files found to restore in the specified directory.")
-	} else if filesRestored > 0 {
-		messages = append(messages, fmt.Sprintf("\nSuccessfully restored %d file(s).", filesRestored))
 	}
-	return messages, firstEncounteredError
+	return messages, filesRestored, firstEncounteredError
 }
 
-// PerformClean deletes all .bak backup files found in the given directory.
-// Returns a slice of messages detailing actions taken and any error encountered.
-func PerformClean(dir string) ([]string, error) {
+// PerformClean deletes all .bak backup files.
+// Returns:
+//   - []string: Slice of messages detailing individual actions taken.
+//   - int: Number of files successfully cleaned.
+//   - error: The first non-fatal error encountered or walk error.
+func PerformClean(dir string) ([]string, int, error) {
 	var messages []string
 	var firstEncounteredError error
 	filesCleaned := 0
@@ -181,7 +179,7 @@ func PerformClean(dir string) ([]string, error) {
 			return nil
 		}
 		if info.IsDir() || !strings.HasSuffix(info.Name(), ".bak") {
-			return nil // Skip directories and non-backup files.
+			return nil
 		}
 
 		if err := os.Remove(path); err != nil {
@@ -190,7 +188,7 @@ func PerformClean(dir string) ([]string, error) {
 				firstEncounteredError = removeErr
 			}
 			fmt.Fprintf(os.Stderr, "Warning (CoreLogic - PerformClean - Remove): %v.\n", removeErr)
-			return nil // Continue with other files.
+			return nil
 		}
 		messages = append(messages, fmt.Sprintf("  - Deleted backup: %s", path))
 		filesCleaned++
@@ -198,37 +196,31 @@ func PerformClean(dir string) ([]string, error) {
 	})
 
 	if walkErr != nil {
-		return messages, walkErr
+		return messages, filesCleaned, walkErr
 	}
-	if filesCleaned == 0 && firstEncounteredError == nil {
+	if filesCleaned == 0 && firstEncounteredError == nil && walkErr == nil {
 		messages = append(messages, "No .bak files found to clean in the specified directory.")
-	} else if filesCleaned > 0 {
-		messages = append(messages, fmt.Sprintf("\nSuccessfully cleaned %d backup file(s).", filesCleaned))
 	}
-	return messages, firstEncounteredError
+	return messages, filesCleaned, firstEncounteredError
 }
 
 // --- Helper Functions ---
 
 // matchesPattern checks if a filename matches the given glob pattern.
-// An empty pattern or "*" is treated as a wildcard matching all files.
-// Returns true if matched, false otherwise, and an error for malformed patterns.
 func matchesPattern(filename, pattern string) (bool, error) {
-	if pattern == "" || pattern == "*" { // Common convention: empty or "*" pattern matches all.
+	if pattern == "" || pattern == "*" {
 		return true, nil
 	}
 	return filepath.Match(pattern, filename)
 }
 
-// createBackup creates a backup copy of the source file by appending ".bak" to its name.
-// It preserves the original file's permissions.
+// createBackup creates a backup copy of the source file.
 func createBackup(srcPath string) error {
 	backupPath := srcPath + ".bak"
 	return copyFile(srcPath, backupPath)
 }
 
-// copyFile copies a file from a source path to a destination path.
-// It preserves the original file's permissions.
+// copyFile copies a file from src to dst, preserving permissions.
 func copyFile(src, dst string) error {
 	input, err := os.ReadFile(src)
 	if err != nil {
@@ -242,11 +234,7 @@ func copyFile(src, dst string) error {
 }
 
 // --- Main Function ---
-// The entry point of the application. It parses command-line flags,
-// handles the -version flag, and decides whether to run in CLI mode
-// or launch the interactive TUI (wizard) mode.
 func main() {
-	// Define command-line flags.
 	dirFlag := flag.String("dir", ".", "Target directory for operations (default: current directory).")
 	patternFlag := flag.String("pattern", "*", "Filename pattern (e.g., *.txt) for -replace operation (default: *).")
 	oldTextFlag := flag.String("old", "", "Text to be replaced (required for -replace operation).")
@@ -257,9 +245,8 @@ func main() {
 	wizardFlag := flag.Bool("wizard", false, "Run in interactive wizard (TUI) mode.")
 	showVersion := flag.Bool("version", false, "Show application version and exit.")
 
-	flag.Parse() // Parse the command-line flags.
+	flag.Parse()
 
-	// Handle the -version flag.
 	if *showVersion {
 		fmt.Printf("PhotonSR version: %s\n", version)
 		fmt.Printf("Commit: %s\n", commit)
@@ -268,84 +255,136 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Determine if wizard mode should be run.
 	runWizard := *wizardFlag
-	// Default to wizard mode if no specific operation flags are provided
-	// and -wizard flag isn't explicitly set to false.
 	if !*wizardFlag && !*restoreFlag && !*cleanFlag && *oldTextFlag == "" && len(flag.Args()) == 0 {
 		runWizard = true
 	}
 
 	if runWizard {
-		// Launch the Bubble Tea TUI application.
 		program := tea.NewProgram(newWizardModel(), tea.WithAltScreen())
 		if _, err := program.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running interactive wizard: %v\n", err)
 			os.Exit(1)
 		}
-		os.Exit(0) // TUI handles its own exit messages.
+		os.Exit(0)
 	}
 
 	// --- CLI Mode Logic ---
 	var operationMessages []string
 	var operationError error
-	operationPerformed := true // Assume an operation will be performed unless explicitly set false.
+	var itemsAffected int // Number of files modified, restored, or cleaned
+	var filesScanned int  // For replacement: number of files matching pattern that were scanned
+	operationPerformed := true
+	actionVerb := ""
 
 	if *cleanFlag {
+		actionVerb = "cleaned"
 		fmt.Fprintln(os.Stdout, "Cleaning backup files...")
-		operationMessages, operationError = PerformClean(*dirFlag)
+		operationMessages, itemsAffected, operationError = PerformClean(*dirFlag)
 	} else if *restoreFlag {
+		actionVerb = "restored"
 		fmt.Fprintln(os.Stdout, "Restoring from backup files...")
-		operationMessages, operationError = PerformRestore(*dirFlag)
-	} else if *oldTextFlag != "" { // -old is required for replace operation.
+		operationMessages, itemsAffected, operationError = PerformRestore(*dirFlag)
+	} else if *oldTextFlag != "" {
+		actionVerb = "modified"
 		fmt.Fprintln(os.Stdout, "Performing text replacement...")
 		opts := ReplaceOptions{
-			Dir:          *dirFlag,
-			Pattern:      *patternFlag,
-			OldText:      *oldTextFlag,
-			NewText:      *newTextFlag,
+			Dir:          *dirFlag, Pattern:      *patternFlag,
+			OldText:      *oldTextFlag, NewText:      *newTextFlag,
 			ShouldBackup: *backupFlag,
 		}
-		var modifiedFiles []string
-		var filesProcessed int
-		modifiedFiles, filesProcessed, operationError = PerformReplacement(opts)
+		var modifiedFilePaths []string
+		modifiedFilePaths, filesScanned, operationError = PerformReplacement(opts)
+		itemsAffected = len(modifiedFilePaths)
 
-		// Construct messages even if there was a non-fatal error, as some files might still have been processed.
-		if len(modifiedFiles) > 0 {
-			operationMessages = append(operationMessages, "Successfully modified files:")
-			for _, f := range modifiedFiles {
-				operationMessages = append(operationMessages, fmt.Sprintf("  - %s", f))
+		// Prepend detailed modification messages
+		if itemsAffected > 0 {
+			detailedMessages := []string{"Successfully modified files:"}
+			for _, f := range modifiedFilePaths {
+				detailedMessages = append(detailedMessages, fmt.Sprintf("  - %s", f))
 			}
-		} else if filesProcessed > 0 && operationError == nil {
-			// Files were processed (matched pattern) but none contained OldText or required modification.
-			operationMessages = append(operationMessages, "No files matched the criteria or required modification (old text not found).")
-		} else if operationError == nil {
-			// No files processed and no error (e.g., directory empty or no files matched pattern).
-			operationMessages = append(operationMessages, "No files found in the specified directory or matching the pattern.")
+			// Prepend these messages to any messages returned by PerformReplacement (e.g., "no files found" if itemsAffected is 0)
+			operationMessages = append(detailedMessages, operationMessages...)
 		}
-		// If operationError is not nil, it will be printed later.
+
+		// Handle cases where no files were modified but files were scanned
+		if operationError == nil && itemsAffected == 0 {
+			if filesScanned > 0 {
+				// This message might already be part of operationMessages from PerformReplacement if it handles this logic.
+				// Let's ensure it's clear.
+				hasNoMatchMsg := false
+				for _, msg := range operationMessages {
+					if strings.Contains(msg, "Old text not found") || strings.Contains(msg, "No files matched the criteria") {
+						hasNoMatchMsg = true
+						break
+					}
+				}
+				if !hasNoMatchMsg {
+					operationMessages = append(operationMessages, "Old text not found in any matching files, or files were already up-to-date.")
+				}
+			} else { // filesScanned == 0
+				hasNoFilesFoundMsg := false
+				for _, msg := range operationMessages {
+					if strings.Contains(msg, "No files found") {
+						hasNoFilesFoundMsg = true
+						break
+					}
+				}
+				if !hasNoFilesFoundMsg {
+					operationMessages = append(operationMessages, "No files found matching the pattern in the specified directory.")
+				}
+			}
+		}
+
 	} else {
-		// No primary operation flag (-clean, -restore, -old) was given.
 		operationPerformed = false
-		if len(flag.Args()) > 0 { // Check for unknown arguments.
+		if len(flag.Args()) > 0 {
 			fmt.Fprintln(os.Stderr, "Error: Unknown arguments provided. Use flags to specify operations.")
 		}
-		// If -version was already handled, or if user explicitly passed -wizard=false without other ops.
 		fmt.Fprintln(os.Stderr, "No operation specified. Use -wizard for interactive mode, or provide operation flags (e.g., -old, -restore, -clean, -version).")
-		flag.Usage() // Print usage information.
+		flag.Usage()
 		os.Exit(1)
 	}
 
 	// Output results and status for CLI mode operations.
 	if operationPerformed {
 		for _, msg := range operationMessages {
-			fmt.Fprintln(os.Stdout, msg)
+			// Avoid printing duplicate "no files found" messages if already handled by core logic.
+			// This simple check might need refinement if messages become more complex.
+			isSummaryMsgFromCore := (strings.Contains(msg, "No .bak files found") || strings.Contains(msg, "No files found")) && itemsAffected == 0
+			if !(isSummaryMsgFromCore && actionVerb != "modified") { // For replace, detail messages are more critical
+				fmt.Fprintln(os.Stdout, msg)
+			}
 		}
+
 		if operationError != nil {
 			fmt.Fprintf(os.Stderr, "\nOperation completed with errors: %v\n", operationError)
+			if itemsAffected > 0 {
+				fmt.Fprintf(os.Stderr, "However, %d file(s) were successfully %s before the error occurred.\n", itemsAffected, actionVerb)
+			}
 			os.Exit(1)
-		} else if len(operationMessages) > 0 || (*cleanFlag || *restoreFlag) { // Check if any message or non-replace op ran
-			fmt.Fprintln(os.Stdout, "\nOperation completed successfully.")
+		} else {
+			// Success messages
+			if itemsAffected > 0 {
+				fmt.Fprintf(os.Stdout, "\nSuccessfully %s %d file(s).\n", actionVerb, itemsAffected)
+			} else if actionVerb == "modified" && filesScanned > 0 {
+				// Message about "Old text not found..." should have been in operationMessages
+				fmt.Fprintln(os.Stdout, "\nOperation completed. No files required changes.")
+			} else if (actionVerb == "cleaned" || actionVerb == "restored") && itemsAffected == 0 {
+				// Message about "No .bak files found..." should have been in operationMessages
+				// if the core function added it.
+				// If operationMessages is empty, means the core func didn't add it.
+				if len(operationMessages) == 0 || (len(operationMessages) == 1 && operationMessages[0] == "") {
+					fmt.Fprintf(os.Stdout, "\nNo .bak files found to %s.\n", strings.TrimSuffix(actionVerb, "ed"))
+				} else {
+					fmt.Fprintln(os.Stdout, "\nOperation completed.")
+				}
+			} else if actionVerb == "modified" && filesScanned == 0 {
+				// "No files found matching pattern"
+                 fmt.Fprintln(os.Stdout, "\nOperation completed.")
+            } else {
+				fmt.Fprintln(os.Stdout, "\nOperation completed successfully.") // General fallback
+			}
 		}
 	}
 }
