@@ -1,144 +1,71 @@
-# .goreleaser.yml
-# Ganti 'your_github_username' dengan username GitHub Anda jika berbeda dari 'arwahdevops'
-# Ganti 'PhotonSR' dengan nama repo Anda jika berbeda
-
-# Nama proyek Anda (biasanya nama repo)
 project_name: PhotonSR
 
-# Variabel lingkungan global yang berlaku untuk semua build
 env:
-  - CGO_ENABLED=0 # Umumnya disarankan untuk cross-compilation yang lebih mudah
+  - CGO_ENABLED=0
 
-# Hook yang dijalankan sebelum proses build utama
 before:
   hooks:
-    - go mod tidy # Pastikan dependensi bersih
-    # - go generate ./... # Uncomment jika Anda menggunakan go generate
+    - go mod tidy
 
-# Konfigurasi untuk build biner
 builds:
-  - # Konfigurasi build utama
-    id: photonsr # ID unik untuk build ini (opsional jika hanya satu)
-    main: ./cmd/main.go # Path ke package main Anda
-    binary: photonsr # Nama biner yang dihasilkan (tanpa ekstensi)
-    # Variabel yang disuntikkan saat build menggunakan ldflags
-    # GoReleaser menyediakan template variabel seperti .Version, .Commit, .Date
+  - id: photonsr
+    main: ./cmd/main.go
+    binary: photonsr
     ldflags:
-      - -s -w # Menghilangkan simbol debug dan DWARF untuk ukuran biner yang lebih kecil
+      - -s -w
       - -X main.version={{.Version}}
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
       - -X main.builtBy=goreleaser
-    # Target sistem operasi dan arsitektur
     goos:
       - linux
       - windows
-      - darwin # macOS
+      - darwin
     goarch:
       - amd64
       - arm64
-    # Untuk ARM 32-bit jika diperlukan (misalnya Raspberry Pi)
-    # goarm:
-    #   - '6'
-    #   - '7'
 
-# Konfigurasi untuk membuat arsip (zip/tar.gz)
 archives:
-  - # Konfigurasi arsip utama
-    id: default
-    # Format arsip (GoReleaser akan memilih zip untuk Windows dan tar.gz untuk lainnya secara default)
-    # format: binary # Jika Anda hanya ingin mengunggah biner tanpa arsip
+  - id: default
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-    # File tambahan yang akan disertakan dalam arsip
     files:
       - LICENSE
       - README.md
       - CHANGELOG.md
-    # Penggantian string dalam nama arsip (opsional)
-    # replacements:
-    #   darwin: macOS
-    #   amd64: x86_64
 
-# Konfigurasi untuk membuat checksum
 checksum:
   name_template: 'checksums.txt'
-  algorithm: sha256 # Algoritma checksum yang umum digunakan
+  algorithm: sha256
 
-# Konfigurasi untuk rilis (snapshot/pre-release) yang dibuat dari commit di branch default (biasanya main/master)
 snapshot:
-  name_template: "{{ incpatch .Version }}-next" # Misal: v0.1.0 -> v0.1.1-next
-  # Atau bisa juga: name_template: "{{ .ShortCommit }}"
+  name_template: "{{ incpatch .Version }}-next"
 
-# Konfigurasi untuk membuat GitHub/GitLab/Gitea Release
 release:
-  # Konfigurasi untuk GitHub Releases
-  github:
-    owner: arwahdevops # Username atau organisasi GitHub pemilik repositori
-    name: PhotonSR # Nama repositori
-    # Jika true, rilis akan dibuat sebagai draft
-    draft: false
-    # Jika true, rilis akan ditandai sebagai pre-release.
-    # 'auto' akan menandainya sebagai pre-release jika versi mengandung kata seperti 'alpha', 'beta', 'rc'.
-    prerelease: auto
-    # PENTING: Izinkan GoReleaser menimpa aset yang sudah ada dengan nama yang sama di rilis
-    overwrite: true
-    # Template untuk judul rilis. {{.Tag}} adalah tag Git (misalnya v0.2.0)
-    name_template: "{{.ProjectName}} {{.Tag}}"
-    # Opsi untuk mengganti aset jika rilis sudah ada (deprecated, gunakan overwrite di atas)
-    # replace_existing_draft: true # Hanya untuk draft
-  # Jika Anda ingin memposting ke layanan lain, konfigurasikan di sini
-  # gitlab:
-  #   owner: your_gitlab_username
-  #   name: PhotonSR
-  #   overwrite: true
-  # gitea:
-  #   owner: ...
-  #   name: ...
-  #   overwrite: true
+  # Opsi rilis umum, kompatibel dengan GoReleaser v1.x
+  draft: false
+  prerelease: auto # 'auto' akan menandai pre-release jika versi mengandung alpha/beta/rc
+  name_template: "{{.ProjectName}} {{.Tag}}" # Judul rilis, misal: PhotonSR v0.2.0
 
-# Konfigurasi untuk menghasilkan changelog dari commit Git
+  # Jika Anda sering membuat rilis sebagai draft dan ingin menimpa draft yang ada:
+  # replace_existing_draft: true # Hanya berfungsi jika draft: true
+
+  # Konfigurasi spesifik provider
+  github:
+    owner: arwahdevops
+    name: PhotonSR
+    # Untuk GoReleaser v1.26.2, 'overwrite' aset untuk rilis yang sudah publish
+    # tidak dikonfigurasi secara eksplisit di sini. Jika terjadi konflik aset
+    # 'already_exists' pada rilis yang sudah publish, aset perlu dihapus manual
+    # di GitHub Releases, atau pertimbangkan update GoReleaser/action ke versi
+    # yang mendukung 'overwrite: true' di bawah 'github:'.
+
 changelog:
-  sort: asc # Urutkan entri changelog (asc/desc)
+  sort: asc
   filters:
-    # Kecualikan commit tertentu dari changelog
     exclude:
       - '^docs:'
       - '^test:'
       - '^chore:'
       - 'Merge pull request'
       - 'Merge branch'
-      - '(?i)skip changelog' # Jika ada commit dengan "skip changelog" di pesannya
-  # Grup commit berdasarkan prefix (opsional)
-  # groups:
-  #   - title: Features
-  #     regexp: "^feat[(\\w)]*:\\s*"
-  #     order: 0
-  #   - title: Bug Fixes
-  #     regexp: "^fix[(\\w)]*:\\s*"
-  #     order: 1
-  #   - title: Others
-  #     order: 999
-
-# Jika Anda ingin menandatangani rilis Anda (opsional)
-# sign:
-#   artifacts: checksum
-#   args: ["--batch", "-u", "{{ .Env.GPG_FINGERPRINT }}", "--output", "${signature}", "--detach-sign", "${artifact}"]
-
-# Jika Anda mempublikasikan ke Docker (opsional)
-# dockers:
-#   - image_templates:
-#       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:{{ .Version }}"
-#       - "ghcr.io/{{ .Env.GITHUB_REPOSITORY_OWNER }}/{{ .ProjectName }}:latest"
-#     goos: linux
-#     goarch: amd64
-#     # Path ke Dockerfile Anda
-#     dockerfile: Dockerfile
-#     build_flag_templates:
-#       - "--pull"
-#       - "--label=org.opencontainers.image.created={{.Date}}"
-#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
-#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-#       - "--label=org.opencontainers.image.version={{.Version}}"
-
-# Modelines (opsional, untuk editor seperti Vim)
-# vim: set ts=2 sw=2 tw=0 fo=cnqrow:
+      - '(?i)skip changelog'
