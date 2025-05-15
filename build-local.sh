@@ -1,9 +1,9 @@
 #!/bin/bash
 # build.sh
 
-set -e # Keluar jika ada error
+set -e
 
-VERSION="0.2.0" # Ganti ini untuk versi berikutnya
+VERSION="0.2.0"
 COMMIT_HASH=$(git rev-parse --short HEAD)
 BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 BUILT_BY="build-script"
