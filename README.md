@@ -2,8 +2,8 @@
 
 CLI and Interactive TUI tool written in Go to search and replace text in files recursively with backup/restore functionality.
 
-![GitHub](https://img.shields.io/badge/License-MIT-blue)
-![Go](https://img.shields.io/badge/Go-1.24.2%2B-success)
+![GitHub License](https://img.shields.io/badge/License-MIT-blue)
+![Go Version](https://img.shields.io/badge/Go-1.24.2%2B-success)
 ![Mode](https://img.shields.io/badge/Mode-CLI%20%26%20TUI-informational)
 
 ## 📝 Description
@@ -31,28 +31,52 @@ The TUI mode is particularly helpful for users who prefer a step-by-step process
 ## 📥 Installation
 
 ### Prerequisites
-- Go 1.24.2 or newer (update this if your `go.mod` specifies a newer version).
+- `curl` or `wget` installed on your system.
+- `tar` installed (for extracting the downloaded archive).
+- For standard Linux/macOS systems, you might need `sudo` privileges if installing to a system directory like `/usr/local/bin`.
 
-### Linux Installation (and other Unix-like systems)
+### Easy Installation (Recommended)
 
-#### Method 1: From Source
+You can install PhotonSR with a single command using either `curl` or `wget`. The script will automatically detect your OS and architecture, download the latest version, and install it to a standard location (e.g., `/usr/local/bin` or `$PREFIX/bin` on Termux).
+
+**Using `curl`:**
 ```bash
-# Clone repository
-git clone https://github.com/arwahdevops/PhotonSR.git
-cd PhotonSR
-
-# Build and install
-go build -o photonsr ./cmd
-sudo mv photonsr /usr/local/bin/
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/arwahdevops/PhotonSR/main/install.sh)"
 ```
 
-#### Method 2: Go Install
+**Using `wget`:**
 ```bash
-go install github.com/arwahdevops/PhotonSR@latest
-# The binary will be at $HOME/go/bin/photonsr
-# You might need to add $HOME/go/bin to your PATH or copy it:
-sudo cp $HOME/go/bin/PhotonSR /usr/local/bin/
+sh -c "$(wget -qO- https://raw.githubusercontent.com/arwahdevops/PhotonSR/main/install.sh)"
 ```
+
+After installation, you might need to open a new terminal session or source your shell's configuration file (e.g., `source ~/.bashrc`, `source ~/.zshrc`) for the `photonsr` command to be available.
+
+### Manual Installation (from Source)
+
+If you prefer to build from source:
+
+1.  **Prerequisites**:
+    *   Go 1.24.2 or newer (update this if your `go.mod` specifies a newer version).
+    *   Git
+
+2.  **Clone and Build**:
+    ```bash
+    # Clone repository
+    git clone https://github.com/arwahdevops/PhotonSR.git
+    cd PhotonSR
+
+    # Build
+    go build -o photonsr ./cmd
+    ```
+
+3.  **Install Manually**:
+    Move the compiled `photonsr` binary to a directory in your `PATH`.
+    ```bash
+    # Example: install to /usr/local/bin (may require sudo)
+    sudo mv photonsr /usr/local/bin/
+    # Or for Termux:
+    # mv photonsr $PREFIX/bin/
+    ```
 
 ## 🚀 Usage
 
@@ -95,6 +119,8 @@ photonsr [OPTIONS] -clean
 | `-backup`    |       | Create `.bak` backup files before modification    | Replace             |
 | `-restore`   |       | Restore files from `.bak` backups                 | Restore             |
 | `-clean`     |       | Delete all `.bak` files in the target directory   | Clean               |
+| `-version`   |       | Show application version and exit.                | (Global)            |
+
 
 **Note:** If `photonsr` is run without any operation flags (`-old`, `-restore`, `-clean`) and `-wizard` is not specified, it will default to launching the **Wizard Mode**.
 
