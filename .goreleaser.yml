@@ -41,23 +41,14 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
 release:
-  # Opsi rilis umum, kompatibel dengan GoReleaser v1.x
-  draft: false
-  prerelease: auto # 'auto' akan menandai pre-release jika versi mengandung alpha/beta/rc
-  name_template: "{{.ProjectName}} {{.Tag}}" # Judul rilis, misal: PhotonSR v0.2.0
+  draft: true
+  prerelease: auto
+  name_template: "{{.ProjectName}} {{.Tag}}"
+  replace_existing_draft: true
 
-  # Jika Anda sering membuat rilis sebagai draft dan ingin menimpa draft yang ada:
-  # replace_existing_draft: true # Hanya berfungsi jika draft: true
-
-  # Konfigurasi spesifik provider
   github:
     owner: arwahdevops
     name: PhotonSR
-    # Untuk GoReleaser v1.26.2, 'overwrite' aset untuk rilis yang sudah publish
-    # tidak dikonfigurasi secara eksplisit di sini. Jika terjadi konflik aset
-    # 'already_exists' pada rilis yang sudah publish, aset perlu dihapus manual
-    # di GitHub Releases, atau pertimbangkan update GoReleaser/action ke versi
-    # yang mendukung 'overwrite: true' di bawah 'github:'.
 
 changelog:
   sort: asc

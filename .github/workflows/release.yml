@@ -1,54 +1,38 @@
-# .github/workflows/release.yml
-name: Release Go Project
+name: Release PhotonSR
 
-# Controls when the workflow will run
 on:
   push:
     tags:
-      - 'v*.*.*' # Trigger the workflow on version tags like v1.0.0, v0.2.1, etc.
+      - 'v*.*.*'
 
-# Defines permissions granted to the GITHUB_TOKEN for this workflow.
-# 'contents: write' is necessary for GoReleaser to create GitHub releases and upload assets.
 permissions:
   contents: write
-  # packages: write # Uncomment if you are publishing to GitHub Packages (e.g., Docker images)
-  # id-token: write # Uncomment if using OIDC for authentication (e.g., for cloud providers, Sigstore)
 
 jobs:
   goreleaser:
-    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Checks out your repository under $GITHUB_WORKSPACE
+        uses: actions/checkout@v4
         with:
-          # Fetch all history for all tags and branches.
-          # This is important for GoReleaser to generate accurate changelogs
-          # and determine previous versions.
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          # Specify the Go version to use. Should match your project's go.mod.
-          go-version: '1.24.2' # UPDATE this to your project's Go version
-          # Optional: Caches Go modules and build cache for faster subsequent runs.
-          # cache: true 
+          go-version: '1.24.2' # Sesuaikan dengan versi Go di go.mod Anda
 
-      # Optional: Run tests before releasing (good practice)
-      # - name: Run tests
-      #   run: go test ./...
+      # Opsional: Uncomment jika Anda build untuk ARM dan membutuhkan QEMU
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@v3
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5 # Use the latest stable version of the GoReleaser action
+        uses: goreleaser/goreleaser-action@v5
         with:
-          # Arguments to pass to the GoReleaser CLI.
-          # 'release' is the default command.
-          # '--clean' removes the 'dist' directory before building, ensuring a clean build.
+          # 'version' bisa dikosongkan untuk menggunakan default dari action,
+          # atau pin ke versi spesifik GoReleaser jika diperlukan.
+          # version: v1.26.2 # Contoh jika ingin pin ke versi yang sama
           args: release --clean
         env:
-          # The GITHUB_TOKEN is automatically provided by GitHub Actions.
-          # It has the permissions defined at the top of the workflow.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # If your GoReleaser config needs other secrets (e.g., for signing, Docker Hub),
-          # you would add them here, referencing repository secrets.
-          # e.g., DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          # GPG_FINGERPRINT: ${{ secrets.GPG_FINGERPRINT }} # Uncomment jika Anda GPG sign rilis
