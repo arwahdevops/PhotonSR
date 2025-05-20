@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"io"      // Required for io.Writer in list.ItemDelegate
-	"os"      // Used for os.Stat to validate directories
+	"io"            // Required for io.Writer in list.ItemDelegate
+	"os"            // Used for os.Stat to validate directories
 	"path/filepath" // Used for filepath.Match to validate patterns
-	"strings" // Used for strings.Builder and other string manipulations
+	"strings"       // Used for strings.Builder and other string manipulations
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -21,14 +21,14 @@ type wizardStep int
 
 const (
 	stepChooseAction     wizardStep = iota // Initial step: user selects the main action.
-	stepEnterDir                         // Step: user inputs the target directory.
-	stepEnterPattern                     // Step: user inputs the file pattern (for 'replace').
-	stepEnterOldText                     // Step: user inputs the text to be searched (for 'replace').
-	stepEnterNewText                     // Step: user inputs the replacement text.
-	stepConfirmBackup                    // Step: user confirms backup creation (for 'replace').
-	stepConfirmOperation                 // Step: user reviews and confirms the operation.
-	stepShowResult                       // Step: displays the outcome of the operation.
-	stepError                            // Step: displays an error message.
+	stepEnterDir                           // Step: user inputs the target directory.
+	stepEnterPattern                       // Step: user inputs the file pattern (for 'replace').
+	stepEnterOldText                       // Step: user inputs the text to be searched (for 'replace').
+	stepEnterNewText                       // Step: user inputs the replacement text.
+	stepConfirmBackup                      // Step: user confirms backup creation (for 'replace').
+	stepConfirmOperation                   // Step: user reviews and confirms the operation.
+	stepShowResult                         // Step: displays the outcome of the operation.
+	stepError                              // Step: displays an error message.
 )
 
 // Action constants define the titles for user-selectable operations.
@@ -139,7 +139,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	// Styles (can be pre-defined in model or globally for efficiency)
 	itemTitleStyle := lipgloss.NewStyle().PaddingLeft(2)
 	selectedItemTitleStyle := lipgloss.NewStyle().PaddingLeft(0).Foreground(lipgloss.Color("62")).Bold(true) // A nice green.
-	itemDescStyle := lipgloss.NewStyle().PaddingLeft(4).Faint(true) // Adjusted padding for alignment with "> "
+	itemDescStyle := lipgloss.NewStyle().PaddingLeft(4).Faint(true)                                          // Adjusted padding for alignment with "> "
 
 	titleRender := itemTitleStyle.Render(i.Title())
 	if index == m.Index() { // Is this item selected?
@@ -160,7 +160,6 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	// Ensure consistent line breaks for item height
 	strBuilder.WriteString("\n")
 
-
 	fmt.Fprint(w, strBuilder.String())
 }
 
@@ -179,7 +178,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		listHeight := msg.Height - 8
-		if listHeight < 4 { listHeight = 4 }
+		if listHeight < 4 {
+			listHeight = 4
+		}
 		m.actionList.SetHeight(listHeight) // Use SetHeight for lists
 		m.actionList.SetWidth(msg.Width - 4)
 		m.backupChoice.SetHeight(listHeight)
@@ -187,7 +188,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if len(m.inputs) > 0 && m.inputs[0].Focused() {
 			inputWidth := msg.Width - 10
-			if inputWidth < 20 { inputWidth = 20 }
+			if inputWidth < 20 {
+				inputWidth = 20
+			}
 			m.inputs[0].Width = inputWidth
 		}
 		return m, nil
@@ -205,17 +208,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				switch m.selectedAction {
 				case actionReplace:
 					switch m.step {
-					case stepEnterDir: m.resetToMainMenu()
-					case stepEnterPattern: m.step = stepEnterDir; m.setupInputForCurrentStep()
-					case stepEnterOldText: m.step = stepEnterPattern; m.setupInputForCurrentStep()
-					case stepEnterNewText: m.step = stepEnterOldText; m.setupInputForCurrentStep()
-					case stepConfirmBackup: m.step = stepEnterNewText; m.setupInputForCurrentStep()
-					case stepConfirmOperation: m.step = stepConfirmBackup
+					case stepEnterDir:
+						m.resetToMainMenu()
+					case stepEnterPattern:
+						m.step = stepEnterDir
+						m.setupInputForCurrentStep()
+					case stepEnterOldText:
+						m.step = stepEnterPattern
+						m.setupInputForCurrentStep()
+					case stepEnterNewText:
+						m.step = stepEnterOldText
+						m.setupInputForCurrentStep()
+					case stepConfirmBackup:
+						m.step = stepEnterNewText
+						m.setupInputForCurrentStep()
+					case stepConfirmOperation:
+						m.step = stepConfirmBackup
 					}
 				case actionRestore, actionClean:
 					switch m.step {
-					case stepEnterDir: m.resetToMainMenu()
-					case stepConfirmOperation: m.step = stepEnterDir; m.setupInputForCurrentStep()
+					case stepEnterDir:
+						m.resetToMainMenu()
+					case stepConfirmOperation:
+						m.step = stepEnterDir
+						m.setupInputForCurrentStep()
 					}
 				default:
 					m.resetToMainMenu()
@@ -246,7 +262,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case stepEnterDir:
 			if msg.String() == "enter" {
 				m.targetDir = strings.TrimSpace(m.inputs[0].Value())
-				if m.targetDir == "" { m.targetDir = "." }
+				if m.targetDir == "" {
+					m.targetDir = "."
+				}
 				m.errorMessage = ""
 				info, err := os.Stat(m.targetDir)
 				if os.IsNotExist(err) {
@@ -262,8 +280,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, nil
 				}
 				switch m.selectedAction {
-				case actionReplace: m.step = stepEnterPattern; m.setupInputForCurrentStep()
-				case actionRestore, actionClean: m.step = stepConfirmOperation
+				case actionReplace:
+					m.step = stepEnterPattern
+					m.setupInputForCurrentStep()
+				case actionRestore, actionClean:
+					m.step = stepConfirmOperation
 				}
 			} else {
 				m.inputs[0], cmd = m.inputs[0].Update(msg)
@@ -273,13 +294,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case stepEnterPattern:
 			if msg.String() == "enter" {
 				m.filePattern = strings.TrimSpace(m.inputs[0].Value())
-				if m.filePattern == "" { m.filePattern = "*" }
+				if m.filePattern == "" {
+					m.filePattern = "*"
+				}
 				m.errorMessage = ""
 				if _, err := filepath.Match(m.filePattern, "testfilename"); err != nil && m.filePattern != "*" {
 					m.errorMessage = fmt.Sprintf("Invalid file pattern syntax: %v", err)
 					return m, nil
 				}
-				m.step = stepEnterOldText; m.setupInputForCurrentStep()
+				m.step = stepEnterOldText
+				m.setupInputForCurrentStep()
 			} else {
 				m.inputs[0], cmd = m.inputs[0].Update(msg)
 				cmds = append(cmds, cmd)
@@ -293,7 +317,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.errorMessage = "Text to replace cannot be empty for 'Replace' action."
 					return m, nil
 				}
-				m.step = stepEnterNewText; m.setupInputForCurrentStep()
+				m.step = stepEnterNewText
+				m.setupInputForCurrentStep()
 			} else {
 				m.inputs[0], cmd = m.inputs[0].Update(msg)
 				cmds = append(cmds, cmd)
@@ -386,12 +411,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			finalMessages = append(finalMessages, summary)
 		}
 		if len(msg.detailMessages) > 0 && msg.itemsAffected > 0 { // Only add details if items were affected
-			if summary != "" { finalMessages = append(finalMessages, "") } // Add a blank line for separation
+			if summary != "" {
+				finalMessages = append(finalMessages, "")
+			} // Add a blank line for separation
 			finalMessages = append(finalMessages, msg.detailMessages...)
 		}
 
 		if len(finalMessages) == 0 { // Fallback if no summary or details
-		    finalMessages = append(finalMessages, "Operation completed. No specific actions to report.")
+			finalMessages = append(finalMessages, "Operation completed. No specific actions to report.")
 		}
 
 		m.resultMessages = finalMessages
@@ -416,13 +443,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // setupInputForCurrentStep configures the text input field.
 func (m *model) setupInputForCurrentStep() {
-	if len(m.inputs) == 0 { m.inputs = make([]textinput.Model, 1) }
+	if len(m.inputs) == 0 {
+		m.inputs = make([]textinput.Model, 1)
+	}
 	ti := textinput.New()
 	switch m.step {
 	case stepEnterDir:
-		ti.Placeholder = m.targetDir; if ti.Placeholder == "" { ti.Placeholder = "." }
+		ti.Placeholder = m.targetDir
+		if ti.Placeholder == "" {
+			ti.Placeholder = "."
+		}
 	case stepEnterPattern:
-		ti.Placeholder = m.filePattern; if ti.Placeholder == "" { ti.Placeholder = "*" }
+		ti.Placeholder = m.filePattern
+		if ti.Placeholder == "" {
+			ti.Placeholder = "*"
+		}
 	case stepEnterOldText:
 		ti.Placeholder = m.oldText
 	case stepEnterNewText:
@@ -431,7 +466,9 @@ func (m *model) setupInputForCurrentStep() {
 	ti.Focus()
 	ti.CharLimit = 256
 	currentInputWidth := m.width - 10
-	if currentInputWidth < 20 { currentInputWidth = 20 }
+	if currentInputWidth < 20 {
+		currentInputWidth = 20
+	}
 	ti.Width = currentInputWidth
 	m.inputs[0] = ti
 	m.focusedInput = 0
@@ -448,7 +485,8 @@ func (m *model) resetToMainMenu() {
 	m.shouldBackup = false
 	m.errorMessage = ""
 	m.resultMessages = nil
-	m.actionList.ResetFilter(); m.actionList.Select(0)
+	m.actionList.ResetFilter()
+	m.actionList.Select(0)
 	m.isLoading = false
 }
 
@@ -462,7 +500,9 @@ func (m model) performOperationCmd() tea.Cmd {
 				NewText: m.newText, ShouldBackup: m.shouldBackup,
 			}
 			modifiedPaths, scanned, err := PerformReplacement(opts)
-			if err != nil { return operationErrorMsg{err} }
+			if err != nil {
+				return operationErrorMsg{err}
+			}
 			// PerformReplacement now returns detailed messages for "no files" or "no match" itself if needed,
 			// but TUI constructs its own summary. So, detailMessages here are only for *actual modifications*.
 			var dtlMsgs []string
@@ -475,7 +515,9 @@ func (m model) performOperationCmd() tea.Cmd {
 
 		case actionRestore:
 			dtlMsgs, restoredCount, err := PerformRestore(m.targetDir)
-			if err != nil { return operationErrorMsg{err} }
+			if err != nil {
+				return operationErrorMsg{err}
+			}
 			// Filter out the generic "No .bak files found..." from dtlMsgs if restoredCount is 0,
 			// as the TUI summary will handle this. Keep only specific file messages.
 			actualDetailMsgs := []string{}
@@ -486,17 +528,19 @@ func (m model) performOperationCmd() tea.Cmd {
 					}
 				}
 			} else if len(dtlMsgs) == 1 && strings.Contains(dtlMsgs[0], "No .bak files found") {
-                 // If the only message is the "no files" summary from core, TUI will make its own.
-                 // So, pass empty detailMessages.
-            } else {
-                actualDetailMsgs = dtlMsgs // pass through if it's something else
-            }
+				// If the only message is the "no files" summary from core, TUI will make its own.
+				// So, pass empty detailMessages.
+			} else {
+				actualDetailMsgs = dtlMsgs // pass through if it's something else
+			}
 			return operationResultMsg{detailMessages: actualDetailMsgs, itemsAffected: restoredCount, filesScanned: restoredCount}
 
 		case actionClean:
 			dtlMsgs, cleanedCount, err := PerformClean(m.targetDir)
-			if err != nil { return operationErrorMsg{err} }
-            actualDetailMsgs := []string{}
+			if err != nil {
+				return operationErrorMsg{err}
+			}
+			actualDetailMsgs := []string{}
 			if cleanedCount > 0 {
 				for _, msg := range dtlMsgs {
 					if strings.HasPrefix(strings.TrimSpace(msg), "- ") {
@@ -504,10 +548,10 @@ func (m model) performOperationCmd() tea.Cmd {
 					}
 				}
 			} else if len(dtlMsgs) == 1 && strings.Contains(dtlMsgs[0], "No .bak files found") {
-                 // as above
-            } else {
-                actualDetailMsgs = dtlMsgs
-            }
+				// as above
+			} else {
+				actualDetailMsgs = dtlMsgs
+			}
 			return operationResultMsg{detailMessages: actualDetailMsgs, itemsAffected: cleanedCount, filesScanned: cleanedCount}
 		}
 		return operationErrorMsg{fmt.Errorf("internal error: unknown action: %s", m.selectedAction)}
@@ -516,7 +560,9 @@ func (m model) performOperationCmd() tea.Cmd {
 
 // View renders the TUI.
 func (m model) View() string {
-	if m.quitting { return "Exiting PhotonSR. Goodbye!\n" }
+	if m.quitting {
+		return "Exiting PhotonSR. Goodbye!\n"
+	}
 
 	var b strings.Builder
 	// Styles
@@ -532,7 +578,7 @@ func (m model) View() string {
 	}
 
 	if m.errorMessage != "" {
-		b.WriteString(errorStyle.Render("Error: " + m.errorMessage) + "\n")
+		b.WriteString(errorStyle.Render("Error: "+m.errorMessage) + "\n")
 	}
 
 	switch m.step {

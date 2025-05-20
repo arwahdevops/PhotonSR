@@ -289,8 +289,8 @@ func main() {
 		actionVerb = "modified"
 		fmt.Fprintln(os.Stdout, "Performing text replacement...")
 		opts := ReplaceOptions{
-			Dir:          *dirFlag, Pattern:      *patternFlag,
-			OldText:      *oldTextFlag, NewText:      *newTextFlag,
+			Dir: *dirFlag, Pattern: *patternFlag,
+			OldText: *oldTextFlag, NewText: *newTextFlag,
 			ShouldBackup: *backupFlag,
 		}
 		var modifiedFilePaths []string
@@ -381,8 +381,8 @@ func main() {
 				}
 			} else if actionVerb == "modified" && filesScanned == 0 {
 				// "No files found matching pattern"
-                 fmt.Fprintln(os.Stdout, "\nOperation completed.")
-            } else {
+				fmt.Fprintln(os.Stdout, "\nOperation completed.")
+			} else {
 				fmt.Fprintln(os.Stdout, "\nOperation completed successfully.") // General fallback
 			}
 		}
